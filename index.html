@@ -131,10 +131,10 @@
         const input = document.getElementById('vendorCode');
         const msgEl = document.getElementById('msg');
         const btn = document.getElementById('submitBtn');
+        let loading = true; // blocks ALL submissions until existing codes are loaded
 
         input.addEventListener('keypress', e => { if (e.key === 'Enter') submitCode(); });
 
-        // Block submissions until existing codes are loaded to prevent duplicate slipping through
         async function loadExisting() {
             btn.disabled = true;
             try {
@@ -151,6 +151,7 @@
             } catch (err) {
                 // Page still works for new submissions if this fails
             }
+            loading = false;
             btn.disabled = false;
             input.focus();
         }
@@ -160,6 +161,7 @@
         }
 
         async function submitCode() {
+            if (loading) return; // hard block — existing codes not yet loaded
             const vendorCode = normalize(input.value);
             clearMsg();
 
