@@ -144,8 +144,8 @@
                 if (data.codes && data.codes.length > 0) {
                     // Oldest first so newest ends up at top after prepending
                     data.codes.forEach(code => {
-                        submitted.add(code);
-                        appendToList(code);
+                        submitted.add(normalize(code));
+                        appendToList(normalize(code));
                     });
                     document.getElementById('listSection').style.display = 'block';
                     document.getElementById('count').textContent = submitted.size + ' шт.';
@@ -158,8 +158,12 @@
             input.focus();
         }
 
+        function normalize(code) {
+            return String(code).trim();
+        }
+
         async function submitCode() {
-            const vendorCode = input.value.trim();
+            const vendorCode = normalize(input.value);
             clearMsg();
 
             if (!vendorCode) {
