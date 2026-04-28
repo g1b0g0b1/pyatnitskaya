@@ -134,15 +134,13 @@
 
         input.addEventListener('keypress', e => { if (e.key === 'Enter') submitCode(); });
 
-        // Load all previously submitted codes from the sheet on page open
+        // Block submissions until existing codes are loaded to prevent duplicate slipping through
         async function loadExisting() {
             btn.disabled = true;
-            input.placeholder = 'Загрузка...';
             try {
                 const res = await fetch(WEBHOOK_URL + '?store=' + encodeURIComponent(STORE));
                 const data = await res.json();
                 if (data.codes && data.codes.length > 0) {
-                    // Oldest first so newest ends up at top after prepending
                     data.codes.forEach(code => {
                         submitted.add(normalize(code));
                         appendToList(normalize(code));
@@ -153,7 +151,6 @@
             } catch (err) {
                 // Page still works for new submissions if this fails
             }
-            input.placeholder = 'Артикул';
             btn.disabled = false;
             input.focus();
         }
@@ -176,32 +173,25 @@
                 return;
             }
 
-            btn.disabled = true;
-
-            try {
-                await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        vendorCode,
-                        store: STORE,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-
-                submitted.add(vendorCode);
-                prependToList(vendorCode);
-                input.value = '';
-                showMsg('✓ Артикул отправлен', 'success');
-                setTimeout(clearMsg, 2500);
-
-            } catch (err) {
-                showMsg('Ошибка отправки. Проверьте соединение.', 'error');
-            }
-
-            btn.disabled = false;
+            // Update UI immediately — don't wait for the POST to complete
+            submitted.add(vendorCode);
+            prependToList(vendorCode);
+            input.value = '';
+            showMsg('✓ Артикул отправлен', 'success');
+            setTimeout(clearMsg, 2500);
             input.focus();
+
+            // Fire POST in background
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    vendorCode,
+                    store: STORE,
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(() => {});
         }
 
         function showMsg(text, type) {
