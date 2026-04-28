@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пятницкая</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 3rem 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 2rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+            color: #1a1a1a;
+        }
+
+        input:focus { border-color: #2563eb; }
+
+        button {
+            width: 100%;
+            padding: 0.85rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        .msg {
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            min-height: 1.2em;
+            display: none;
+        }
+
+        .msg.error { color: #dc2626; display: block; }
+        .msg.success { color: #16a34a; display: block; }
+
+        .list-section {
+            margin-top: 2.5rem;
+            display: none;
+        }
+
+        .list-section h2 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            padding: 0.6rem 0.9rem;
+            background: #eff6ff;
+            border-left: 3px solid #2563eb;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 0.4rem;
+            font-size: 0.95rem;
+            color: #1a1a1a;
+        }
+
+        .count {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Пятницкая</h1>
+
+        <input type="text" id="vendorCode" placeholder="Артикул" autocomplete="off" autofocus />
+        <button id="submitBtn" onclick="submitCode()">Отправить</button>
+        <div class="msg" id="msg"></div>
+
+        <div class="list-section" id="listSection">
+            <h2>Загружено за сессию</h2>
+            <div class="count" id="count"></div>
+            <ul id="submittedList"></ul>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ Replace with your deployed Apps Script URL
+        const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxJTm5_cPlQnZrcQRk3qtjm-xxe2NJ743Uo1taNxWeegi4ZxBOwABSLmnHaV_AjnJ4F/exec';
+        const STORE = 'Пятницкая';
+
+        const submitted = new Set();
+        const input = document.getElementById('vendorCode');
+        const msgEl = document.getElementById('msg');
+        const btn = document.getElementById('submitBtn');
+
+        input.addEventListener('keypress', e => { if (e.key === 'Enter') submitCode(); });
+
+        async function submitCode() {
+            const vendorCode = input.value.trim();
+
+            clearMsg();
+
+            if (!vendorCode) {
+                showMsg('Введите артикул', 'error');
+                return;
+            }
+
+            if (submitted.has(vendorCode)) {
+                showMsg('Данный товар уже загружен, проверьте правильность написания артикула', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+
+            try {
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        vendorCode,
+                        store: STORE,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                submitted.add(vendorCode);
+                addToList(vendorCode);
+                input.value = '';
+                showMsg('✓ Артикул отправлен', 'success');
+                setTimeout(clearMsg, 2500);
+
+            } catch (err) {
+                showMsg('Ошибка отправки. Проверьте соединение.', 'error');
+            }
+
+            btn.disabled = false;
+            input.focus();
+        }
+
+        function showMsg(text, type) {
+            msgEl.textContent = text;
+            msgEl.className = 'msg ' + type;
+        }
+
+        function clearMsg() {
+            msgEl.textContent = '';
+            msgEl.className = 'msg';
+        }
+
+        function addToList(code) {
+            document.getElementById('listSection').style.display = 'block';
+            document.getElementById('count').textContent = submitted.size + ' шт.';
+            const li = document.createElement('li');
+            li.textContent = code;
+            document.getElementById('submittedList').prepend(li);
+        }
+    </script>
+</body>
+</html>
